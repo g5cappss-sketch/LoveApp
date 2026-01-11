@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#ff9ff3">
+    
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Love Space">
+    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2530/2530861.png">
+    <link rel="manifest" href="manifest.json">
+
+    <title>Our Love Space</title>
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
+    <style>
+        :root {
+            --primary: #ff6b81;
+            --primary-dark: #ff4757;
+            --bg-gradient: linear-gradient(135deg, #ffeaa7 0%, #ff9ff3 50%, #7bed9f 100%);
+            --glass: rgba(255, 255, 255, 0.85);
+            --glass-strong: rgba(255, 255, 255, 0.95);
+            --shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+            --text-main: #2f3542;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Quicksand', sans-serif;
+            background: var(--bg-gradient);
+            background-size: 400% 400%;
+            animation: gradientBG 15s ease infinite;
+            margin: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            overscroll-behavior: none;
+            color: var(--text-main);
+        }
+
+        @keyframes gradientBG {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* --- BACKGROUND FLOATING HEARTS --- */
+        .bg-hearts {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: -1; overflow: hidden;
+        }
+        .bg-heart {
+            position: absolute; bottom: -10vh;
+            background-color: rgba(255, 255, 255, 0.3);
+            width: 20px; height: 20px;
+            transform: rotate(45deg);
+            animation: flyUp 10s linear infinite;
+        }
+        .bg-heart::before, .bg-heart::after {
+            content: ""; position: absolute; width: 20px; height: 20px;
+            background-color: inherit; border-radius: 50%;
+        }
+        .bg-heart::before { top: -10px; left: 0; }
+        .bg-heart::after { left: -10px; top: 0; }
+
+        @keyframes flyUp {
+            0% { transform: translateY(0) rotate(45deg) scale(0.5); opacity: 0; }
+            20% { opacity: 0.8; }
+            100% { transform: translateY(-120vh) rotate(45deg) scale(1.2); opacity: 0; }
+        }
+
+        /* --- APP LAYOUT --- */
+        .app-container {
+            flex: 1;
+            overflow-y: hidden;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            padding-top: env(safe-area-inset-top);
+        }
+
+        .tab-content {
+            display: none;
+            height: 100%;
+            overflow-y: auto;
+            padding: 20px 20px 100px 20px;
+            animation: slideUp 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
+        }
+        .tab-content.active { display: block; }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- COMPONENTS --- */
+        .card {
+            background: var(--glass);
+            backdrop-filter: blur(8px);
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 15px;
+            box-shadow: var(--shadow);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            transition: transform 0.2s;
+        }
+        .card:active { transform: scale(0.98); }
+
+        .btn-primary {
+            background: linear-gradient(45deg, #ff6b81, #ff4757);
+            color: white; border: none; width: 100%; padding: 15px;
+            border-radius: 15px; font-weight: 700; font-size: 1rem;
+            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
+            cursor: pointer;
+        }
+        .btn-secondary {
+            background: white; color: var(--text-main); border: none;
+            padding: 10px 20px; border-radius: 10px; font-weight: 600;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1); cursor: pointer;
+        }
+
+        /* --- LOGIN SCREEN --- */
+        .login-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--glass-strong);
+            backdrop-filter: blur(20px);
+            z-index: 9999;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            padding: 30px;
+        }
+        .login-input {
+            width: 100%; padding: 15px; margin-bottom: 15px;
+            border: 2px solid #f1f2f6; border-radius: 15px;
+            background: #fdfdfd; font-size: 1rem; text-align: center;
+            transition: 0.3s;
+        }
+        .login-input:focus { border-color: var(--primary); outline: none; }
+
+        /* --- HOME TAB --- */
+        .big-heart {
+            font-size: 4rem; color: var(--primary);
+            filter: drop-shadow(0 5px 15px rgba(255, 107, 129, 0.4));
+            animation: beat 1.2s infinite cubic-bezier(0.215, 0.61, 0.355, 1);
+        }
+        @keyframes beat {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .counter-box {
+            font-size: 2.5rem; font-weight: 800;
+            background: -webkit-linear-gradient(#ff6b81, #ff9ff3);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+
+        /* --- MEMORY TAB --- */
+        .memory-item {
+            border-left: 4px solid var(--primary);
+            padding-left: 15px; margin-bottom: 20px;
+            position: relative;
+        }
+        .memory-date { font-size: 0.8rem; color: #777; font-weight: 600; }
+        .memory-content { font-size: 1rem; margin-top: 5px; line-height: 1.5; }
+        .btn-add-float {
+            position: fixed; bottom: 100px; right: 20px;
+            width: 55px; height: 55px; border-radius: 50%;
+            background: var(--primary); color: white;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.5rem; box-shadow: 0 5px 20px rgba(255, 71, 87, 0.5);
+            border: none; cursor: pointer; z-index: 50;
+        }
+
+        /* --- CHAT TAB (ĐÃ SỬA LỖI) --- */
+        #tab-chat { 
+            padding: 0; 
+            background: #fff0f3; 
+            display: none; 
+            flex-direction: column; 
+            position: relative; /* Để định vị input */
+        }
+        #tab-chat.active { display: flex; }
+        
+        .chat-list { 
+            flex: 1; 
+            overflow-y: auto; 
+            padding: 15px; 
+            /* Tăng padding dưới để không bị thanh nhập tin nhắn che */
+            padding-bottom: 160px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 10px; 
+        }
+        
+        .msg { max-width: 75%; padding: 12px 16px; border-radius: 20px; font-size: 0.95rem; position: relative; word-wrap: break-word; }
+        .msg.mine { align-self: flex-end; background: var(--primary); color: white; border-bottom-right-radius: 5px; }
+        .msg.theirs { align-self: flex-start; background: white; color: var(--text-main); border-bottom-left-radius: 5px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+        
+        /* THANH NHẬP CHAT (FIXED) */
+        .chat-input-bar {
+            position: fixed; /* Cố định vị trí */
+            bottom: 95px;    /* Nằm trên thanh điều hướng (20px + 65px + 10px) */
+            left: 0;
+            width: 100%;
+            padding: 10px; 
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(5px);
+            display: flex; 
+            gap: 10px;
+            align-items: center; 
+            border-top: 1px solid #eee;
+            z-index: 90; /* Nằm dưới thanh điều hướng (z-100) nhưng trên tin nhắn */
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+        }
+        .chat-input { flex: 1; padding: 12px; border-radius: 25px; border: 1px solid #eee; background: #f8f9fa; outline: none; }
+
+        /* --- BOTTOM NAV --- */
+        .bottom-nav {
+            position: fixed; bottom: 20px; left: 20px; right: 20px;
+            background: white; height: 65px; border-radius: 35px;
+            display: flex; justify-content: space-around; align-items: center;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1); z-index: 100;
+        }
+        .nav-item { font-size: 1.3rem; color: #dfe4ea; transition: 0.3s; padding: 10px; position: relative; }
+        .nav-item.active { color: var(--primary); transform: translateY(-5px); }
+        .nav-item.active::after {
+            content: ''; position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 5px; height: 5px; background: var(--primary); border-radius: 50%;
+        }
+
+        /* MODAL */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5); z-index: 2000;
+            display: none; align-items: center; justify-content: center;
+        }
+        .modal-content { background: white; width: 85%; padding: 25px; border-radius: 20px; animation: popIn 0.3s; }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+    </style>
+</head>
+<body>
+
+    <div class="bg-hearts" id="bgHearts"></div>
+
+    <div class="login-overlay" id="loginScreen">
+        <div class="big-heart" style="margin-bottom: 20px;">🔒</div>
+        <h2 style="color: var(--primary-dark); margin-bottom: 5px;">Love Space</h2>
+        <p style="color: #777; margin-bottom: 30px;">Không gian riêng tư của 2 ta</p>
+        
+        <input type="text" id="username" class="login-input" placeholder="Tên tài khoản (VanGiang / KhanhHuyen)">
+        <div style="position: relative; width: 100%; margin-bottom: 15px;">
+    <input type="password" id="password" class="login-input" placeholder="Mật khẩu bí mật" style="margin-bottom: 0;">
+    <i class="fas fa-eye" id="toggleIcon" onclick="togglePassword()" 
+       style="position: absolute; right: 15px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #888;">
+    </i>
+</div>
+        <button class="btn-primary" onclick="handleLogin()">Đăng Nhập</button>
+    </div>
+
+    <div class="app-container">
+
+        <div id="tab-home" class="tab-content active">
+            <div class="card" style="text-align: center; margin-top: 20px;">
+                <i class="fas fa-heart big-heart"></i>
+                <div style="margin-top: 15px; color: #555;">Chúng mình đã yêu nhau</div>
+                <div class="counter-box" id="daysCount">...</div>
+                <div id="startDateDisplay" style="color: #999; font-size: 0.9rem;">Từ ngày: ...</div>
+            </div>
+
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                    <h3 style="margin: 0; color: var(--text-main);"><i class="fas fa-calendar-day" style="color: #ffa502"></i> Sự kiện sắp tới</h3>
+                    <button onclick="openEventModal()" style="border: none; background: #f1f2f6; padding: 5px 10px; border-radius: 10px;"><i class="fas fa-plus"></i></button>
+                </div>
+                <div id="eventList" style="font-size: 0.9rem;">
+                    </div>
+            </div>
+
+            <div class="card">
+                <h3 style="margin: 0 0 15px 0;"><i class="fas fa-check-circle" style="color: #2ed573"></i> Điểm danh</h3>
+                <button id="btnCheckin" class="btn-primary" onclick="doCheckIn()">Điểm danh ngay</button>
+                <div style="text-align: center; margin-top: 10px; color: #777;">Streak: <b id="streakNum" style="color: var(--primary)">0</b> 🔥</div>
+            </div>
+        </div>
+
+        <div id="tab-memories" class="tab-content">
+            <h2 style="color: var(--primary-dark); margin-bottom: 20px;">Nhật ký tình yêu</h2>
+            <div id="memoryList">
+                <div style="text-align: center; color: #999; margin-top: 50px;">Chưa có kỷ niệm nào...<br>Hãy thêm kỷ niệm đầu tiên nhé!</div>
+            </div>
+            <button class="btn-add-float" onclick="openMemoryModal()"><i class="fas fa-pen"></i></button>
+        </div>
+
+        <div id="tab-chat" class="tab-content">
+            <div style="padding: 15px; background: white; text-align: center; font-weight: 700; color: var(--primary); box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                Box Chat Mật 🤫
+            </div>
+            <div class="chat-list" id="messageList"></div>
+            <div class="chat-input-bar">
+                <input type="text" id="msgInput" class="chat-input" placeholder="Nhắn gì đi..." onkeypress="handleEnter(event)">
+                <button onclick="sendMessage()" style="background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%;"><i class="fas fa-paper-plane"></i></button>
+            </div>
+        </div>
+
+        <div id="tab-settings" class="tab-content">
+            <h2 style="color: var(--primary-dark)">Cài đặt</h2>
+            <div class="card">
+                <h3>Ngày bắt đầu yêu</h3>
+                <p style="font-size: 0.8rem; color: #777;">Thay đổi ở đây sẽ cập nhật cho cả 2 máy</p>
+                <input type="date" id="settingStartDate" class="login-input">
+                <button class="btn-primary" onclick="saveSettings()">Lưu thay đổi</button>
+            </div>
+            <button class="btn-secondary" onclick="logout()" style="width: 100%; border: 1px solid #ff4757; color: #ff4757;">Đăng xuất</button>
+        </div>
+
+    </div>
+
+    <div class="bottom-nav">
+        <div class="nav-item active" onclick="switchTab('home', this)"><i class="fas fa-heart"></i></div>
+        <div class="nav-item" onclick="switchTab('memories', this)"><i class="fas fa-book-open"></i></div>
+        <div class="nav-item" onclick="switchTab('chat', this)"><i class="fas fa-comments"></i></div>
+        <div class="nav-item" onclick="switchTab('settings', this)"><i class="fas fa-cog"></i></div>
+    </div>
+
+    <div class="modal-overlay" id="memoryModal">
+        <div class="modal-content">
+            <h3>Thêm kỷ niệm mới</h3>
+            <input type="text" id="memTitle" class="login-input" placeholder="Tiêu đề (VD: Đi Đà Lạt)">
+            <input type="date" id="memDate" class="login-input">
+            <textarea id="memContent" class="login-input" style="height: 100px; text-align: left;" placeholder="Kể lại chút gì đó..."></textarea>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-secondary" onclick="document.getElementById('memoryModal').style.display='none'" style="flex: 1">Hủy</button>
+                <button class="btn-primary" onclick="saveMemory()" style="flex: 1">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="eventModal">
+        <div class="modal-content">
+            <h3>Thêm sự kiện</h3>
+            <input type="text" id="evtTitle" class="login-input" placeholder="Tên sự kiện">
+            <input type="date" id="evtDate" class="login-input">
+            <div style="display: flex; gap: 10px;">
+                <button class="btn-secondary" onclick="document.getElementById('eventModal').style.display='none'" style="flex: 1">Hủy</button>
+                <button class="btn-primary" onclick="saveEvent()" style="flex: 1">Lưu</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+
+    <script>
+        // --- 1. CONFIG FIREBASE (GIỮ NGUYÊN KEY CỦA BẠN) ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyAOHjawrqZjB-1NNLXAZvwU_MJfBzzDjxY",
+            authDomain: "lovechat-a2adf.firebaseapp.com",
+            projectId: "lovechat-a2adf",
+            storageBucket: "lovechat-a2adf.firebasestorage.app",
+            messagingSenderId: "1069849521874",
+            appId: "1:1069849521874:web:6254a28474d01246ab470b",
+            measurementId: "G-4SCK3JY5S1"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // --- 2. HỆ THỐNG BACKGROUND TIM BAY ---
+        function createHearts() {
+            const container = document.getElementById('bgHearts');
+            for(let i=0; i<15; i++){
+                let heart = document.createElement('div');
+                heart.className = 'bg-heart';
+                heart.style.left = Math.random() * 100 + "vw";
+                heart.style.animationDuration = (Math.random() * 5 + 5) + "s";
+                heart.style.animationDelay = Math.random() * 5 + "s";
+                container.appendChild(heart);
+            }
+        }
+        createHearts();
+
+        // --- 3. ĐĂNG NHẬP (LOGIN SYSTEM) ---
+        const ACCOUNTS = {
+            "VanGiang": "19022004",
+            "KhanhHuyen": "20112005"
+        };
+        let currentUser = localStorage.getItem('loveUser');
+
+        if (currentUser) {
+            document.getElementById('loginScreen').style.display = 'none';
+            initApp();
+        }
+
+        function handleLogin() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            
+            if (ACCOUNTS[u] && ACCOUNTS[u] === p) {
+                currentUser = u;
+                localStorage.setItem('loveUser', u);
+                document.getElementById('loginScreen').style.display = 'none';
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                initApp();
+            } else {
+                document.getElementById('loginError').style.display = 'block';
+                document.getElementById('password').value = '';
+            }
+        }
+// Hàm bật/tắt hiển thị mật khẩu
+function togglePassword() {
+    const pwdInput = document.getElementById('password');
+    const icon = document.getElementById('toggleIcon');
+    
+    if (pwdInput.type === "password") {
+        pwdInput.type = "text"; // Hiện mật khẩu
+        icon.classList.remove('fa-eye');
+        icon.classList.add('fa-eye-slash'); // Đổi icon thành mắt gạch chéo
+    } else {
+        pwdInput.type = "password"; // Ẩn mật khẩu
+        icon.classList.remove('fa-eye-slash');
+        icon.classList.add('fa-eye'); // Đổi lại icon mắt thường
+    }
+}
+        function logout() {
+            localStorage.removeItem('loveUser');
+            location.reload();
+        }
+
+        // --- 4. KHỞI TẠO APP & ĐỒNG BỘ DỮ LIỆU ---
+        let globalStartDate = new Date();
+
+        function initApp() {
+            loadSettings();
+            loadMemories();
+            loadChat();
+            loadEvents(); // Load sự kiện (bao gồm tự động lấy từ Google ảo)
+            loadStreak();
+        }
+
+        // --- A. SETTINGS & DATE COUNTER ---
+        function loadSettings() {
+            db.ref('settings/startDate').on('value', (snapshot) => {
+                const dateStr = snapshot.val();
+                if (dateStr) {
+                    globalStartDate = new Date(dateStr);
+                    document.getElementById('settingStartDate').value = dateStr;
+                    document.getElementById('startDateDisplay').innerText = `Từ ngày: ${globalStartDate.toLocaleDateString('vi-VN')}`;
+                    updateCounter();
+                } else {
+                    // Mặc định nếu chưa set
+                    saveSettingsInitial("2023-02-14"); 
+                }
+            });
+        }
+
+        function saveSettingsInitial(date) {
+            db.ref('settings/startDate').set(date);
+        }
+
+        function saveSettings() {
+            const date = document.getElementById('settingStartDate').value;
+            if(date) {
+                db.ref('settings/startDate').set(date);
+                alert("Đã cập nhật ngày yêu!");
+            }
+        }
+
+        function updateCounter() {
+            const now = new Date();
+            const diff = now - globalStartDate;
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            document.getElementById('daysCount').innerText = days + " Ngày";
+        }
+        setInterval(updateCounter, 60000); // Update mỗi phút
+
+        // --- B. EVENT SYSTEM (THÔNG MINH) ---
+        // Hàm tạo danh sách ngày lễ tự động (Thay thế Google API phức tạp)
+        function getSmartHolidays() {
+            const year = new Date().getFullYear();
+            return [
+                { name: "Tết Dương Lịch 🎉", date: `${year}-01-01` },
+                { name: "Valentine 💝", date: `${year}-02-14` },
+                { name: "Quốc tế Phụ nữ 🌹", date: `${year}-03-08` },
+                { name: "Giỗ tổ Hùng Vương 🙏", date: `${year}-04-18` }, // Ví dụ (Cần tính âm lịch nếu muốn chuẩn xác hơn)
+                { name: "Quốc khánh 🇻🇳", date: `${year}-09-02` },
+                { name: "Phụ nữ Việt Nam 💃", date: `${year}-10-20` },
+                { name: "Giáng Sinh 🎄", date: `${year}-12-25` },
+                { name: "Sinh nhật Giang 🎂", date: `${year}-02-19` }, // Theo data của bạn
+                { name: "Sinh nhật Huyền 🎂", date: `${year}-11-20` }  // Theo data của bạn
+            ];
+        }
+
+        function loadEvents() {
+            const listDiv = document.getElementById('eventList');
+            
+            db.ref('events').on('value', (snapshot) => {
+                listDiv.innerHTML = "";
+                let allEvents = getSmartHolidays(); // Lấy lễ mặc định
+                
+                // Lấy lễ tự thêm
+                snapshot.forEach(child => {
+                    allEvents.push(child.val());
+                });
+
+                // Sắp xếp và lọc sự kiện sắp tới
+                const today = new Date().toISOString().split('T')[0];
+                allEvents.sort((a, b) => a.date.localeCompare(b.date));
+                
+                // Hiển thị
+                let count = 0;
+                allEvents.forEach(evt => {
+                    if (evt.date >= today && count < 5) { // Chỉ hiện 5 sự kiện sắp tới
+                        const item = document.createElement('div');
+                        item.style.cssText = "display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid #eee;";
+                        // Tính số ngày còn lại
+                        const daysLeft = Math.ceil((new Date(evt.date) - new Date()) / (1000*60*60*24));
+                        const tag = daysLeft === 0 ? "<span style='color:red; font-weight:bold'>HÔM NAY</span>" : `<span style='color:var(--primary)'>Còn ${daysLeft} ngày</span>`;
+                        
+                        item.innerHTML = `<span>${evt.name}</span> ${tag}`;
+                        listDiv.appendChild(item);
+                        count++;
+                    }
+                });
+                
+                if(count === 0) listDiv.innerHTML = "<div style='text-align:center; color:#999'>Không có sự kiện gần đây</div>";
+            });
+        }
+
+        function openEventModal() { document.getElementById('eventModal').style.display = 'flex'; }
+        
+        function saveEvent() {
+            const title = document.getElementById('evtTitle').value;
+            const date = document.getElementById('evtDate').value;
+            if(title && date) {
+                db.ref('events').push({ name: title, date: date });
+                document.getElementById('eventModal').style.display = 'none';
+                // Reset input
+                document.getElementById('evtTitle').value = "";
+                document.getElementById('evtDate').value = "";
+            }
+        }
+
+        // --- C. MEMORIES (KỶ NIỆM) ---
+        function loadMemories() {
+            const list = document.getElementById('memoryList');
+            db.ref('memories').on('value', (snapshot) => {
+                list.innerHTML = "";
+                const memories = [];
+                snapshot.forEach(child => memories.push(child.val()));
+                
+                // Sắp xếp mới nhất lên đầu
+                memories.sort((a, b) => b.timestamp - a.timestamp);
+
+                if(memories.length === 0) {
+                    list.innerHTML = `<div style="text-align: center; color: #999; margin-top: 50px;">Chưa có kỷ niệm nào...<br>Hãy thêm kỷ niệm đầu tiên nhé!</div>`;
+                    return;
+                }
+
+                memories.forEach(mem => {
+                    const div = document.createElement('div');
+                    div.className = 'memory-item card';
+                    div.innerHTML = `
+                        <div class="memory-date"><i class="far fa-clock"></i> ${mem.date} - Bởi: ${mem.author}</div>
+                        <div style="font-weight: 700; font-size: 1.1rem; color: var(--primary-dark)">${mem.title}</div>
+                        <div class="memory-content">${mem.content}</div>
+                    `;
+                    list.appendChild(div);
+                });
+            });
+        }
+
+        function openMemoryModal() { document.getElementById('memoryModal').style.display = 'flex'; }
+        
+        function saveMemory() {
+            const title = document.getElementById('memTitle').value;
+            const date = document.getElementById('memDate').value;
+            const content = document.getElementById('memContent').value;
+            
+            if(title && content) {
+                db.ref('memories').push({
+                    title: title,
+                    date: date || new Date().toISOString().split('T')[0],
+                    content: content,
+                    author: currentUser,
+                    timestamp: Date.now()
+                });
+                document.getElementById('memoryModal').style.display = 'none';
+                // Reset form
+                document.getElementById('memTitle').value = "";
+                document.getElementById('memContent').value = "";
+            } else {
+                alert("Viết gì đó đi chứ!");
+            }
+        }
+
+        // --- D. CHAT & STREAK (GIỮ LẠI LOGIC CŨ NHƯNG CẢI TIẾN UI) ---
+        function loadChat() {
+            const msgList = document.getElementById('messageList');
+            db.ref('messages').limitToLast(50).on('child_added', snapshot => {
+                const data = snapshot.val();
+                const isMine = data.sender === currentUser;
+                const div = document.createElement('div');
+                div.className = `msg ${isMine ? 'mine' : 'theirs'}`;
+                div.innerHTML = `${data.text}`;
+                msgList.appendChild(div);
+                msgList.scrollTop = msgList.scrollHeight;
+            });
+        }
+        function sendMessage() {
+            const input = document.getElementById('msgInput');
+            const text = input.value.trim();
+            if(text) {
+                db.ref('messages').push({ sender: currentUser, text: text, timestamp: Date.now() });
+                input.value = "";
+            }
+        }
+        function handleEnter(e) { if(e.key === 'Enter') sendMessage(); }
+
+        function loadStreak() {
+            // Checkin dùng localStorage cho đơn giản
+            const streak = localStorage.getItem('streak') || 0;
+            document.getElementById('streakNum').innerText = streak;
+            
+            const today = new Date().toDateString();
+            if(localStorage.getItem('lastCheckIn') === today) {
+                const btn = document.getElementById('btnCheckin');
+                btn.classList.add('disabled');
+                btn.style.background = "#ccc";
+                btn.innerText = "Đã điểm danh hôm nay";
+            }
+        }
+
+        function doCheckIn() {
+            const today = new Date().toDateString();
+            if(localStorage.getItem('lastCheckIn') === today) return;
+            
+            let streak = parseInt(localStorage.getItem('streak') || 0) + 1;
+            localStorage.setItem('streak', streak);
+            localStorage.setItem('lastCheckIn', today);
+            
+            document.getElementById('streakNum').innerText = streak;
+            document.getElementById('btnCheckin').innerText = "Đã điểm danh hôm nay";
+            document.getElementById('btnCheckin').style.background = "#ccc";
+            
+            // Hiệu ứng pháo hoa khi điểm danh thành công
+            confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        }
+
+        // --- E. NAV LOGIC ---
+        function switchTab(tabName, el) {
+            document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+            el.classList.add('active');
+        }
+
+    </script>
+</body>
+</html>
